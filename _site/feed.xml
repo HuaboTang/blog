@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>唐华嶓的Blog</title>
+    <description>Such theme, very cool.</description>
+    <link>http://localhost:4000</link>
+    <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml" />
+    
+      <item>
+        <title>Springboot Docker Aliyun</title>
+        <description>&lt;h1 id=&quot;背景&quot;&gt;背景&lt;/h1&gt;
+
+&lt;p&gt;最近使用SpringBoot和Docker，给公司的广告平台在阿里云上部署了弹性伸缩服务。这里记录下过程和配置。&lt;/p&gt;
+
+&lt;p&gt;阿里弹性扩容目前是基于ECS镜像来启动新的服务器。单纯使用镜像的问题是：当应用升级时，为了运行最新的服务，需要创建新的镜像，并修改弹性扩容的配置以调用新的镜像。费时费力。可替换的方案有两个：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;在服务器上拉取代码，打包，再运行服务&lt;/li&gt;
+  &lt;li&gt;使用Docker镜像，拉取最新的镜像并运行&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;第一种方案，不确定因素更多，如：pull代码的账号密码、打包依赖的版本等。选择第二种方案实施。&lt;/p&gt;
+
+&lt;h1 id=&quot;一些条件和限定&quot;&gt;一些条件和限定&lt;/h1&gt;
+&lt;ul&gt;
+  &lt;li&gt;项目是Java写的，并使用了SpringBoot进行开发和部署&lt;/li&gt;
+  &lt;li&gt;部署弹性伸缩的模块是处理http请求的&lt;/li&gt;
+  &lt;li&gt;Maven管理Jar依赖&lt;/li&gt;
+  &lt;li&gt;以下内容将只描述在开发层面的处理，诸如阿里云弹性伸缩配置将不进行介绍&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h1 id=&quot;开始&quot;&gt;开始&lt;/h1&gt;
+
+&lt;h2 id=&quot;镜像启动逻辑&quot;&gt;镜像启动逻辑&lt;/h2&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;镜像安装Docker，设置开机启动&lt;/li&gt;
+  &lt;li&gt;使用systemctl，开机执行脚本，拉取最新镜像，并启动镜像容器&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h2 id=&quot;springboot增加docker打包和发布&quot;&gt;SpringBoot增加Docker打包和发布&lt;/h2&gt;
+
+&lt;h3 id=&quot;pomxml&quot;&gt;pom.xml&lt;/h3&gt;
+
+&lt;p&gt;打包和发布使用spotify提供的dockerfile插件，配置如下：&lt;/p&gt;
+
+&lt;div class=&quot;language-xml highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;plugin&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;groupId&amp;gt;&lt;/span&gt;com.spotify&lt;span class=&quot;nt&quot;&gt;&amp;lt;/groupId&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;artifactId&amp;gt;&lt;/span&gt;dockerfile-maven-plugin&lt;span class=&quot;nt&quot;&gt;&amp;lt;/artifactId&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;version&amp;gt;&lt;/span&gt;1.3.6&lt;span class=&quot;nt&quot;&gt;&amp;lt;/version&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;configuration&amp;gt;&lt;/span&gt;
+        # 打包工作目录
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;contextDirectory&amp;gt;&lt;/span&gt;${project.build.directory}&lt;span class=&quot;nt&quot;&gt;&amp;lt;/contextDirectory&amp;gt;&lt;/span&gt;
+        # Dockerfile中的参数
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;buildArgs&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;JAR_FILE&amp;gt;&lt;/span&gt;${project.build.finalName}.jar&lt;span class=&quot;nt&quot;&gt;&amp;lt;/JAR_FILE&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;/buildArgs&amp;gt;&lt;/span&gt;
+        # image版本
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;tag&amp;gt;&lt;/span&gt;latest&lt;span class=&quot;nt&quot;&gt;&amp;lt;/tag&amp;gt;&lt;/span&gt;
+        # 使用maven setting来配置用户信息
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;useMavenSettingsForAuth&amp;gt;&lt;/span&gt;true&lt;span class=&quot;nt&quot;&gt;&amp;lt;/useMavenSettingsForAuth&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;/configuration&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/plugin&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;maven-settingxml&quot;&gt;maven setting.xml&lt;/h3&gt;
+
+&lt;p&gt;在maven的setting.xml中配置镜像仓库的相关信息：&lt;/p&gt;
+
+&lt;div class=&quot;language-xml highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;servers&amp;gt;&lt;/span&gt;
+    ...
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;server&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;id&amp;gt;&lt;/span&gt;阿里docker镜像仓库地址&lt;span class=&quot;nt&quot;&gt;&amp;lt;/id&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;username&amp;gt;&lt;/span&gt;用户名&lt;span class=&quot;nt&quot;&gt;&amp;lt;/username&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;password&amp;gt;&lt;/span&gt;密码&lt;span class=&quot;nt&quot;&gt;&amp;lt;/password&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;configuration&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;email&amp;gt;&lt;/span&gt;邮箱&lt;span class=&quot;nt&quot;&gt;&amp;lt;/email&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;/configuration&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;/server&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/servers&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;dockerfile&quot;&gt;Dockerfile&lt;/h3&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;FROM java:8
+VOLUME [&quot;/tmp&quot;, &quot;/home/www/server/logs&quot;]
+ARG JAR_FILE
+ADD ${JAR_FILE} @project.build.finalName@.jar
+
+RUN /bin/cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+  &amp;amp;&amp;amp; echo 'Asia/Shanghai' &amp;gt;/etc/timezone \
+ENTRYPOINT exec java $JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -jar /@project.build.finalName@.jar
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;打包命令&quot;&gt;打包命令&lt;/h3&gt;
+
+&lt;p&gt;项目目录下执行：&lt;/p&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;mvn clean install -Dmaven.test.skip &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\ &lt;/span&gt;
+mvn -f xx/pom.xml install dockerfile:build dockerfile:push &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+-Dmaven.test.skip
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;服务器初始化脚本&quot;&gt;服务器初始化脚本&lt;/h2&gt;
+
+&lt;h3 id=&quot;启动shell脚本&quot;&gt;启动shell脚本&lt;/h3&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;#!/bin/sh&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;##########################################&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# $Name:        start_docker.sh&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# $Version:     v1.0&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# $Function:&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# $Author:      vbobot&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# $page:        http://blog.vbobot.com&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# $Create Date: 2018-01-29&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# $Desc:        启动server docker&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;##########################################&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# Usage Function&lt;/span&gt;
+usage&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;Usage: &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$0&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt; do_handle&quot;&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+do_handle&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;c&quot;&gt;# 使用正确的用户名和密码替换(username} 和 {password}    &lt;/span&gt;
+    docker login --username&lt;span class=&quot;o&quot;&gt;={&lt;/span&gt;username&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt; -p &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;password&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt; registry.ap-southeast-1.aliyuncs.com
+    docker pull &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;镜像地址&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+    docker &lt;span class=&quot;nb&quot;&gt;kill &lt;/span&gt;server
+    docker rm server
+    docker run -e &lt;span class=&quot;s2&quot;&gt;&quot;SPRING_PROFILES_ACTIVE=pro&quot;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+        -e &lt;span class=&quot;s2&quot;&gt;&quot;USER=www&quot;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+        -e &lt;span class=&quot;s2&quot;&gt;&quot;JAVA_OPTS=-Xms5g -Xmx5g -Xmn3g -XX:+UseConcMarkSweepGC -XX:+PrintGCDetails -Xloggc:/home/www/product/adt-server-data/gc.log&quot;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+        -p 8080:8080 -t --name server &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+        -v /home/www/server/logs:/home/www/server/logs &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+        -v /tmp:/tmp &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+        registry.ap-southeast-1.aliyuncs.com/codrim_cs/codrim-adt-server-data:latest
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# Main Function&lt;/span&gt;
+main&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in
+        &lt;/span&gt;do_handle&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+            do_handle
+            &lt;span class=&quot;p&quot;&gt;;;&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+            usage
+            &lt;span class=&quot;p&quot;&gt;;;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;esac&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# Exec&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$# &lt;/span&gt;!&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; 1 &lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; ; &lt;span class=&quot;k&quot;&gt;then
+	&lt;/span&gt;usage
+	&lt;span class=&quot;nb&quot;&gt;exit &lt;/span&gt;1
+&lt;span class=&quot;k&quot;&gt;fi
+&lt;/span&gt;main &lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;systemctl配置&quot;&gt;systemctl配置&lt;/h3&gt;
+&lt;p&gt;使用systemctl配置开机启动任务，执行上面的shell。位置：/etc/systemd/system/xxxx.service&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;[Unit]
+Description=Codrim adt server data docker
+# 在docker启动之后执行
+After=docker.service
+
+[Service]
+Type=forking
+User=root
+ExecStart=/bin/bash /root/start_docker.sh do_handle
+
+[Install]
+WantedBy=multi-user.target
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h1 id=&quot;参考资料&quot;&gt;参考资料&lt;/h1&gt;
+
+</description>
+        <pubDate>Wed, 07 Feb 2018 00:00:00 +0800</pubDate>
+        <link>http://localhost:4000/posts/SpringBoot-Docker-aliyun</link>
+        <guid isPermaLink="true">http://localhost:4000/posts/SpringBoot-Docker-aliyun</guid>
+      </item>
+    
+      <item>
+        <title>First Blog</title>
+        <description>&lt;h1 id=&quot;first-blog&quot;&gt;First Blog&lt;/h1&gt;
+</description>
+        <pubDate>Thu, 06 Apr 2017 00:00:00 +0800</pubDate>
+        <link>http://localhost:4000/posts/first-blog</link>
+        <guid isPermaLink="true">http://localhost:4000/posts/first-blog</guid>
+      </item>
+    
+  </channel>
+</rss>
