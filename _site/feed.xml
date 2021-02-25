@@ -29,13 +29,21 @@
   &lt;li&gt;以下内容将只描述在开发层面的处理，诸如阿里云弹性伸缩配置将不进行介绍&lt;/li&gt;
 &lt;/ul&gt;
 
+&lt;h1 id=&quot;弹性伸缩服务-ess&quot;&gt;弹性伸缩服务 ESS&lt;/h1&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;阿里指引文档：https://help.aliyun.com/product/25855.html?spm=a2c4g.11186623.3.1.fD99G0&lt;/p&gt;
+&lt;/blockquote&gt;
+
 &lt;h1 id=&quot;开始&quot;&gt;开始&lt;/h1&gt;
 
-&lt;h2 id=&quot;镜像启动逻辑&quot;&gt;镜像启动逻辑&lt;/h2&gt;
+&lt;h2 id=&quot;扩容过程&quot;&gt;扩容过程&lt;/h2&gt;
 
 &lt;ol&gt;
+  &lt;li&gt;调整项目，引入spotify提供的dockerfile maven插件，让项目具备构建镜像能力&lt;/li&gt;
+  &lt;li&gt;创建阿里docker镜像仓库，项目每次发布时，增加更新镜像环节&lt;/li&gt;
   &lt;li&gt;镜像安装Docker，设置开机启动&lt;/li&gt;
-  &lt;li&gt;使用systemctl，开机执行脚本，拉取最新镜像，并启动镜像容器&lt;/li&gt;
+  &lt;li&gt;使用systemctl，开机执行脚本，拉取最新镜像，并运行&lt;/li&gt;
 &lt;/ol&gt;
 
 &lt;h2 id=&quot;springboot增加docker打包和发布&quot;&gt;SpringBoot增加Docker打包和发布&lt;/h2&gt;
@@ -44,7 +52,7 @@
 
 &lt;p&gt;打包和发布使用spotify提供的dockerfile插件，配置如下：&lt;/p&gt;
 
-&lt;div class=&quot;language-xml highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;plugin&amp;gt;&lt;/span&gt;
+&lt;div class=&quot;language-xml highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;plugin&amp;gt;&lt;/span&gt;
     &lt;span class=&quot;nt&quot;&gt;&amp;lt;groupId&amp;gt;&lt;/span&gt;com.spotify&lt;span class=&quot;nt&quot;&gt;&amp;lt;/groupId&amp;gt;&lt;/span&gt;
     &lt;span class=&quot;nt&quot;&gt;&amp;lt;artifactId&amp;gt;&lt;/span&gt;dockerfile-maven-plugin&lt;span class=&quot;nt&quot;&gt;&amp;lt;/artifactId&amp;gt;&lt;/span&gt;
     &lt;span class=&quot;nt&quot;&gt;&amp;lt;version&amp;gt;&lt;/span&gt;1.3.6&lt;span class=&quot;nt&quot;&gt;&amp;lt;/version&amp;gt;&lt;/span&gt;
@@ -61,14 +69,13 @@
         &lt;span class=&quot;nt&quot;&gt;&amp;lt;useMavenSettingsForAuth&amp;gt;&lt;/span&gt;true&lt;span class=&quot;nt&quot;&gt;&amp;lt;/useMavenSettingsForAuth&amp;gt;&lt;/span&gt;
     &lt;span class=&quot;nt&quot;&gt;&amp;lt;/configuration&amp;gt;&lt;/span&gt;
 &lt;span class=&quot;nt&quot;&gt;&amp;lt;/plugin&amp;gt;&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
 &lt;h3 id=&quot;maven-settingxml&quot;&gt;maven setting.xml&lt;/h3&gt;
 
 &lt;p&gt;在maven的setting.xml中配置镜像仓库的相关信息：&lt;/p&gt;
 
-&lt;div class=&quot;language-xml highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;servers&amp;gt;&lt;/span&gt;
+&lt;div class=&quot;language-xml highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;servers&amp;gt;&lt;/span&gt;
     ...
     &lt;span class=&quot;nt&quot;&gt;&amp;lt;server&amp;gt;&lt;/span&gt;
         &lt;span class=&quot;nt&quot;&gt;&amp;lt;id&amp;gt;&lt;/span&gt;阿里docker镜像仓库地址&lt;span class=&quot;nt&quot;&gt;&amp;lt;/id&amp;gt;&lt;/span&gt;
@@ -79,11 +86,11 @@
         &lt;span class=&quot;nt&quot;&gt;&amp;lt;/configuration&amp;gt;&lt;/span&gt;
     &lt;span class=&quot;nt&quot;&gt;&amp;lt;/server&amp;gt;&lt;/span&gt;
 &lt;span class=&quot;nt&quot;&gt;&amp;lt;/servers&amp;gt;&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
 &lt;h3 id=&quot;dockerfile&quot;&gt;Dockerfile&lt;/h3&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;FROM java:8
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;FROM java:8
 VOLUME [&quot;/tmp&quot;, &quot;/home/www/server/logs&quot;]
 ARG JAR_FILE
 ADD ${JAR_FILE} @project.build.finalName@.jar
@@ -91,23 +98,25 @@ ADD ${JAR_FILE} @project.build.finalName@.jar
 RUN /bin/cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
   &amp;amp;&amp;amp; echo 'Asia/Shanghai' &amp;gt;/etc/timezone \
 ENTRYPOINT exec java $JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -jar /@project.build.finalName@.jar
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
 &lt;h3 id=&quot;打包命令&quot;&gt;打包命令&lt;/h3&gt;
 
 &lt;p&gt;项目目录下执行：&lt;/p&gt;
-&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;mvn clean install -Dmaven.test.skip &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;mvn clean install &lt;span class=&quot;nt&quot;&gt;-Dmaven&lt;/span&gt;.test.skip &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
 &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\ &lt;/span&gt;
-mvn -f xx/pom.xml install dockerfile:build dockerfile:push &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
--Dmaven.test.skip
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
+mvn &lt;span class=&quot;nt&quot;&gt;-f&lt;/span&gt; xx/pom.xml install dockerfile:build dockerfile:push &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;-Dmaven&lt;/span&gt;.test.skip
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;阿里镜像仓库&quot;&gt;阿里镜像仓库&lt;/h2&gt;
+
+&lt;p&gt;具体使用方式不在此说明，请参考https://help.aliyun.com/product/60716.html?spm=a2c4g.750001.2.9.HlNst6&lt;/p&gt;
 
 &lt;h2 id=&quot;服务器初始化脚本&quot;&gt;服务器初始化脚本&lt;/h2&gt;
 
 &lt;h3 id=&quot;启动shell脚本&quot;&gt;启动shell脚本&lt;/h3&gt;
-&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;#!/bin/sh&lt;/span&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;#!/bin/sh&lt;/span&gt;
 &lt;span class=&quot;c&quot;&gt;##########################################&lt;/span&gt;
 &lt;span class=&quot;c&quot;&gt;# $Name:        start_docker.sh&lt;/span&gt;
 &lt;span class=&quot;c&quot;&gt;# $Version:     v1.0&lt;/span&gt;
@@ -125,16 +134,16 @@ usage&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot
 
 do_handle&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
     &lt;span class=&quot;c&quot;&gt;# 使用正确的用户名和密码替换(username} 和 {password}    &lt;/span&gt;
-    docker login --username&lt;span class=&quot;o&quot;&gt;={&lt;/span&gt;username&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt; -p &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;password&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt; registry.ap-southeast-1.aliyuncs.com
+    docker login &lt;span class=&quot;nt&quot;&gt;--username&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;={&lt;/span&gt;username&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-p&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;password&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt; registry.ap-southeast-1.aliyuncs.com
     docker pull &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;镜像地址&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
     docker &lt;span class=&quot;nb&quot;&gt;kill &lt;/span&gt;server
     docker rm server
-    docker run -e &lt;span class=&quot;s2&quot;&gt;&quot;SPRING_PROFILES_ACTIVE=pro&quot;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
-        -e &lt;span class=&quot;s2&quot;&gt;&quot;USER=www&quot;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
-        -e &lt;span class=&quot;s2&quot;&gt;&quot;JAVA_OPTS=-Xms5g -Xmx5g -Xmn3g -XX:+UseConcMarkSweepGC -XX:+PrintGCDetails -Xloggc:/home/www/product/adt-server-data/gc.log&quot;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
-        -p 8080:8080 -t --name server &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
-        -v /home/www/server/logs:/home/www/server/logs &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
-        -v /tmp:/tmp &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    docker run &lt;span class=&quot;nt&quot;&gt;-e&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;SPRING_PROFILES_ACTIVE=pro&quot;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;-e&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;USER=www&quot;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;-e&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;JAVA_OPTS=-Xms5g -Xmx5g -Xmn3g -XX:+UseConcMarkSweepGC -XX:+PrintGCDetails -Xloggc:/home/www/product/adt-server-data/gc.log&quot;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;-p&lt;/span&gt; 8080:8080 &lt;span class=&quot;nt&quot;&gt;-t&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--name&lt;/span&gt; server &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; /home/www/server/logs:/home/www/server/logs &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; /tmp:/tmp &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
         registry.ap-southeast-1.aliyuncs.com/codrim_cs/codrim-adt-server-data:latest
 &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
 
@@ -151,17 +160,17 @@ main&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;
 &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
 
 &lt;span class=&quot;c&quot;&gt;# Exec&lt;/span&gt;
-&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$# &lt;/span&gt;!&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; 1 &lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; ; &lt;span class=&quot;k&quot;&gt;then
+&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$# &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; 1 &lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;then
 	&lt;/span&gt;usage
 	&lt;span class=&quot;nb&quot;&gt;exit &lt;/span&gt;1
 &lt;span class=&quot;k&quot;&gt;fi
 &lt;/span&gt;main &lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
 &lt;h3 id=&quot;systemctl配置&quot;&gt;systemctl配置&lt;/h3&gt;
 &lt;p&gt;使用systemctl配置开机启动任务，执行上面的shell。位置：/etc/systemd/system/xxxx.service&lt;/p&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;[Unit]
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;[Unit]
 Description=Codrim adt server data docker
 # 在docker启动之后执行
 After=docker.service
@@ -173,15 +182,242 @@ ExecStart=/bin/bash /root/start_docker.sh do_handle
 
 [Install]
 WantedBy=multi-user.target
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h1 id=&quot;参考资料&quot;&gt;参考资料&lt;/h1&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
 </description>
         <pubDate>Wed, 07 Feb 2018 00:00:00 +0800</pubDate>
         <link>http://localhost:4000/posts/SpringBoot-Docker-aliyun</link>
         <guid isPermaLink="true">http://localhost:4000/posts/SpringBoot-Docker-aliyun</guid>
+      </item>
+    
+      <item>
+        <title>广告平台扩容重构</title>
+        <description>&lt;h2 id=&quot;1-版本修订记录&quot;&gt;1 版本修订记录&lt;/h2&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;日期&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;内容&lt;/th&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;作者&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;2017-06-29&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;首发&lt;/td&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;诸葛亮&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;h1 id=&quot;2-重构目标&quot;&gt;2. 重构目标&lt;/h1&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;提升CS系统容量，通过无限水平扩容，理论上支持无上限的点击量&lt;/li&gt;
+  &lt;li&gt;实时统计数据&lt;/li&gt;
+  &lt;li&gt;提升稳定性&lt;/li&gt;
+  &lt;li&gt;提升服务器利用率、控制服务器成本&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h1 id=&quot;21-重构关键任务点&quot;&gt;2.1 重构关键任务点&lt;/h1&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;定时任务分离&lt;/li&gt;
+  &lt;li&gt;点击等数据存储，由缓存转移到MongoDB等服务&lt;/li&gt;
+  &lt;li&gt;使用新的逻辑进行统计&lt;/li&gt;
+  &lt;li&gt;数据实时性&lt;/li&gt;
+  &lt;li&gt;规划重构阶段，最小范围调整，上线验证&lt;/li&gt;
+  &lt;li&gt;服务迁移到阿里，采用小型廉价机器部署方案&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h1 id=&quot;3-系统方案设计&quot;&gt;3. 系统方案设计&lt;/h1&gt;
+&lt;h2 id=&quot;31-框架设计&quot;&gt;3.1 框架设计&lt;/h2&gt;
+&lt;h3 id=&quot;311-原有结构和依赖关系&quot;&gt;3.1.1 原有结构和依赖关系&lt;/h3&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/cs_1.png&quot; alt=&quot;image&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;说明：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;adt-web为用户的SAAS控制台模块，用户在系统中编辑广告等配置信息时，会把信息同步到Memcached缓存中&lt;/li&gt;
+  &lt;li&gt;adt-data为接收点击和转化请求的模块，收到点击后，会读取Memcached中配置信息，解释请求，再丢到Redis队列中&lt;/li&gt;
+  &lt;li&gt;adt-handle，包括：点击&amp;amp;转化请求消费，数据从Redis往MySQL迁移以及一些定时统计的任务，依赖MySQL和Redis&lt;/li&gt;
+  &lt;li&gt;python为遗留项目，提供了一些代adt-web调用的报表数据接口&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;问题：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;对Memcached依赖严重，且各自依赖数据结构，adt-web调整极有可能影响到adt-data和dat-handle服务的正常&lt;/li&gt;
+  &lt;li&gt;遗留python，现在团队规模小，有问题时调整困难&lt;/li&gt;
+  &lt;li&gt;adt-handle功能臃肿，无法通过水平扩容，快速提升系统容量&lt;/li&gt;
+  &lt;li&gt;广告监测，使用Redis作为存储媒介，成本高；&lt;/li&gt;
+  &lt;li&gt;明细数据存储和统计，使用MySQL，效率低。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;312-新框架和依赖设计&quot;&gt;3.1.2 新框架和依赖设计&lt;/h3&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/cs_2.png&quot; alt=&quot;image&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;说明：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;蓝色是新增或拆分出来的模块&lt;/li&gt;
+  &lt;li&gt;adt-data保持不变&lt;/li&gt;
+  &lt;li&gt;adt-handle拆分为adt-handle和adt-data-task。adt-handle仅保留点击和转化数据消费相关的功能&lt;/li&gt;
+  &lt;li&gt;adt-data-task，包括从adt-handle中拆分出来的定时统计相关的功能&lt;/li&gt;
+  &lt;li&gt;引入队列，具体的中间件，见关键技术选型-队列&lt;/li&gt;
+  &lt;li&gt;新增配置服务，屏蔽广告监测数据侧对缓存的绝对依赖&lt;/li&gt;
+  &lt;li&gt;新增adt-data-server，提供统计数据的接口给adt-web&lt;/li&gt;
+  &lt;li&gt;新增MongoDB用于存储点击和转化明细数据&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;32-关键技术选型&quot;&gt;3.2 关键技术选型&lt;/h2&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;队列
+    &lt;ul&gt;
+      &lt;li&gt;
+        &lt;p&gt;ActiveMq （舍弃）
+根据PAD使用情况，问题比较多，如：缺乏注册中心，分布式下每新增一台MQ服务，都必须调整配置文件，将新的生产和消费服务指向它，运维成本高&lt;/p&gt;
+      &lt;/li&gt;
+      &lt;li&gt;
+        &lt;p&gt;Kafka （推荐）
+拥有注册中心，消息处理能力强&lt;/p&gt;
+      &lt;/li&gt;
+      &lt;li&gt;
+        &lt;p&gt;RocketMQ
+待定&lt;/p&gt;
+      &lt;/li&gt;
+      &lt;li&gt;
+        &lt;p&gt;Redis
+可使用list等数据类型实现队列效果，但还是非标准的队列中间件。且数据堆积时，完全占用内容，提高了服务器的成本&lt;/p&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;点击&amp;amp;转化明细数据存储
+    &lt;ul&gt;
+      &lt;li&gt;
+        &lt;p&gt;Redis
+效率高，存储和读取的速度都非常快，但成本高，且不可靠&lt;/p&gt;
+      &lt;/li&gt;
+      &lt;li&gt;
+        &lt;p&gt;MongoDB（推荐）
+存储效率高，读取的速度也十分的快，同时本身支持水平扩容。自带的MapReduce处理，可加快报表统计。&lt;/p&gt;
+      &lt;/li&gt;
+      &lt;li&gt;
+        &lt;p&gt;MongoDB云服务
+运维投入低，成本。&lt;/p&gt;
+      &lt;/li&gt;
+      &lt;li&gt;
+        &lt;p&gt;HBase（待定）
+不了解细节&lt;/p&gt;
+      &lt;/li&gt;
+      &lt;li&gt;
+        &lt;p&gt;Mysql（舍弃）
+存储量低，效率低，数据量大时，检索慢&lt;/p&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;33-关键功能设计&quot;&gt;3.3 关键功能设计&lt;/h2&gt;
+
+&lt;h3 id=&quot;331-点击处理&quot;&gt;3.3.1 点击处理&lt;/h3&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/images/cs_3.png&quot; alt=&quot;image&quot; /&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;332-转化处理&quot;&gt;3.3.2 转化处理&lt;/h3&gt;
+
+&lt;p&gt;与原有逻辑基本一致，但直接从MongoDB中取点击进行匹配。同时消息传递和通知直接基于队列，不再依赖Redis。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/cs_4.png&quot; alt=&quot;image&quot; /&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;333-转化限制处理&quot;&gt;3.3.3 转化限制处理&lt;/h3&gt;
+
+&lt;p&gt;转化限制的处理是，将待转化限制广告的转化，临时存储起来，经过一定时间后，再取出所有的缓冲转化，按照转化限制的规则标识转化限制和不转化限制，再进行转化处理，最后到“已处理转化中”，如下图所示：
+&lt;img src=&quot;/assets/images/cs_5.png&quot; alt=&quot;image&quot; /&gt;
+调整：&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;原有定时监测转化限制缓冲到期，在handle处理中，转移到adt-data-task模块；&lt;/li&gt;
+  &lt;li&gt;判定检测到期后，直接往队列中发送满足条件的key，替换为原有将key写入另外一Redis集合中的处理&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;334-数据实时&quot;&gt;3.3.4 数据实时&lt;/h3&gt;
+
+&lt;p&gt;整体的逻辑是，用缓存实时计数，得到瞬时值，定期将数据，进行统计，落地到MySQL统计报表中。&lt;/p&gt;
+
+&lt;p&gt;缓存的计数，按小时进行统计&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;方案A
+缓存+Mongo统计。在处理点击和转化时，使用缓存累加点击和转化。间隔单位时间，如10分钟，启动任务，在Mongo中基于明细数据，进行统计，得到结果，存储到MySQL中，并重置缓存的值。
+界面显示的值是MySQL+缓存中的值。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;方案B
+完全基于缓存进行统计，在处理点击和转化时，进行实时的叠加，每10分钟，将数据同步到数据库中。&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;34-数据结构设计&quot;&gt;3.4 数据结构设计&lt;/h2&gt;
+
+&lt;h3 id=&quot;341-mysql&quot;&gt;3.4.1 MySQL&lt;/h3&gt;
+
+&lt;p&gt;MySQL表结构与现有保持一致&lt;/p&gt;
+
+&lt;h3 id=&quot;342-mongodb&quot;&gt;3.4.2 MongoDB&lt;/h3&gt;
+&lt;ul&gt;
+  &lt;li&gt;点击 clicks
+    &lt;ul&gt;
+      &lt;li&gt;主键id: tid&lt;/li&gt;
+      &lt;li&gt;分片索引：offerid, affid, id&lt;/li&gt;
+      &lt;li&gt;其它索引：sdate&lt;/li&gt;
+      &lt;li&gt;字段：点击相关信息所有的字段&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;转化 converions
+    &lt;ul&gt;
+      &lt;li&gt;主键：tid&lt;/li&gt;
+      &lt;li&gt;索引：offerid, affid, sdate&lt;/li&gt;
+      &lt;li&gt;字段：点击&amp;amp;转化，相关信息所有字段&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;343-实时统计缓存数据结构&quot;&gt;3.4.3 实时统计缓存数据结构&lt;/h3&gt;
+
+&lt;p&gt;待补充&lt;/p&gt;
+
+&lt;h1 id=&quot;4-项目实施阶段&quot;&gt;4 项目实施阶段&lt;/h1&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;第一阶段
+    &lt;ul&gt;
+      &lt;li&gt;拆分模块，实现水平扩容&lt;/li&gt;
+      &lt;li&gt;基于现有配置依赖缓存的方式开发&lt;/li&gt;
+      &lt;li&gt;将明细数据落地到MongoDB&lt;/li&gt;
+      &lt;li&gt;基于MongoDB进行报表统计&lt;/li&gt;
+      &lt;li&gt;项目上线时，迁移回阿里，纯阿里海外服务器部署&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;第二阶段
+    &lt;ul&gt;
+      &lt;li&gt;待1.2.2完整开发完时，一并发布&lt;/li&gt;
+      &lt;li&gt;数据实时&lt;/li&gt;
+      &lt;li&gt;去缓存依赖，依赖服务化&lt;/li&gt;
+      &lt;li&gt;考虑国内海外系统整合&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;41-实施方案&quot;&gt;4.1 实施方案&lt;/h2&gt;
+
+&lt;h3 id=&quot;411-第一阶段迁移至阿里&quot;&gt;4.1.1 第一阶段迁移至阿里&lt;/h3&gt;
+</description>
+        <pubDate>Mon, 12 Jun 2017 00:00:00 +0800</pubDate>
+        <link>http://localhost:4000/posts/cs-repeate</link>
+        <guid isPermaLink="true">http://localhost:4000/posts/cs-repeate</guid>
       </item>
     
       <item>

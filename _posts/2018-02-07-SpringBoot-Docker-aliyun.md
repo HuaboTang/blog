@@ -15,12 +15,18 @@
 - Maven管理Jar依赖
 - 以下内容将只描述在开发层面的处理，诸如阿里云弹性伸缩配置将不进行介绍
 
+# 弹性伸缩服务 ESS
+
+> 阿里指引文档：https://help.aliyun.com/product/25855.html?spm=a2c4g.11186623.3.1.fD99G0
+
 # 开始
 
-## 镜像启动逻辑
+## 扩容过程
 
-1. 镜像安装Docker，设置开机启动
-2. 使用systemctl，开机执行脚本，拉取最新镜像，并启动镜像容器
+1. 调整项目，引入spotify提供的dockerfile maven插件，让项目具备构建镜像能力
+2. 创建阿里docker镜像仓库，项目每次发布时，增加更新镜像环节
+3. 镜像安装Docker，设置开机启动
+4. 使用systemctl，开机执行脚本，拉取最新镜像，并运行
 
 
 ## SpringBoot增加Docker打包和发布
@@ -68,6 +74,7 @@
 ```
 
 ### Dockerfile
+
 ```
 FROM java:8
 VOLUME ["/tmp", "/home/www/server/logs"]
@@ -88,6 +95,10 @@ mvn clean install -Dmaven.test.skip \
 mvn -f xx/pom.xml install dockerfile:build dockerfile:push \
 -Dmaven.test.skip
 ```
+
+## 阿里镜像仓库
+
+具体使用方式不在此说明，请参考https://help.aliyun.com/product/60716.html?spm=a2c4g.750001.2.9.HlNst6
 
 ##  服务器初始化脚本
 
@@ -146,6 +157,7 @@ main $1
 
 ### systemctl配置
 使用systemctl配置开机启动任务，执行上面的shell。位置：/etc/systemd/system/xxxx.service
+
 ```
 [Unit]
 Description=Codrim adt server data docker
@@ -160,7 +172,5 @@ ExecStart=/bin/bash /root/start_docker.sh do_handle
 [Install]
 WantedBy=multi-user.target
 ```
-
-# 参考资料
 
 

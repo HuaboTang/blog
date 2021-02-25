@@ -14,6 +14,9 @@ links:
   - name:         About me
     url:          /about
     external:     false
+  - name:         个人简历
+    url:          /resume
+    external:     false
 # ------------ CONFIGURABLE END ------------
 
 permalink:        /posts/:title
