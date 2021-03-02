@@ -96,3 +96,4 @@ Java软件开发工作
 - 服务化框架SpringCloud, Apache Dubbo 都有应用到生产环境
 - 熟悉Hadoop相关分布式存储及统计处理
 - Java开源常见中间键都熟练使用，如：Redis、Memcached、Kafka、Mongo、ES等
+- 熟悉容器化技术：Docker, k8s
